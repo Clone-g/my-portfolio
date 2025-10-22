@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sai Myat Min Thant | Creative AI-Powered Digital Creator</title>
-    <link rel="icon" type="image/x-icon" href="./images/Pucci.jpeg">
+    <link rel="shortcut icon" href="./images/Pucci.jpeg" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -18,13 +18,14 @@
 
 <body>
     <header class="site-header" id="home">
-        <nav class="navbar">
+        <nav class="navbar" aria-label="Primary">
             <div class="brand">Sai Myat Min Thant</div>
-            <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="Toggle navigation" />
+            <input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="Toggle navigation"
+                aria-expanded="false" aria-controls="primary-navigation" />
             <label for="nav-toggle" class="nav-toggle-label">
                 <span></span>
             </label>
-            <ul class="nav-links">
+            <ul class="nav-links" id="primary-navigation">
                 <li><a href="#home">Home</a></li>
                 <li><a href="#about">About</a></li>
                 <li><a href="#experience">Experience</a></li>
@@ -43,6 +44,7 @@
                 </a>
             </div>
         </nav>
+        <div class="nav-overlay" id="navOverlay" hidden aria-hidden="true"></div>
         <section class="hero">
             <div class="hero-content" data-animate>
                 <span class="hero-tag">Creative AI-Powered Digital Creator | Future Software Engineer</span>
@@ -334,9 +336,7 @@
                 <h2>Let’s create something meaningful together.</h2>
             </div>
             <div class="contact-grid">
-                <form class="contact-form" action="https://api.web3forms.com/submit" method="POST">
-                    <input type="hidden" name="access_key" value="YOUR_ACCESS_KEY_HERE">
-
+                <form class="contact-form">
                     <div class="input-group">
                         <label for="name">Name</label>
                         <input type="text" id="name" name="name" placeholder="Your name" required />
@@ -352,9 +352,9 @@
                         <textarea id="message" name="message" rows="5" placeholder="Tell me about your project"
                             required></textarea>
                     </div>
-                    <!-- Optional redirect after submission -->
-                    <input type="hidden" name="redirect" value="https://yourdomain.com/thank-you.html">
+
                     <button type="submit" class="btn">Send Message</button>
+                    <p id="form-status" style="margin-top:.5rem;"></p>
                 </form>
                 <div class="contact-info" data-animate>
                     <div class="contact-card">
@@ -367,17 +367,15 @@
                     </div>
                     <div class="contact-card">
                         <i class="fa-brands fa-linkedin"></i>
-                        <a href="https://www.linkedin.com/in/sai-myat-min-thant-43276a217/" target="_blank"
+                        <a href="https://linkedin.com/in/sai-myat-min-thant-43276a217" target="_blank"
                             rel="noreferrer">LinkedIn Profile</a>
                     </div>
                     <div class="contact-socials">
-                        <a href="https://www.facebook.com/saimyatmin.thant.7" aria-label="Facebook" target="_blank"
-                            rel="noreferrer"><i class="fa-brands fa-facebook"></i></a>
-                        <a href="https://www.youtube.com" aria-label="YouTube" target="_blank"><i
-                                class="fa-brands fa-youtube"></i></a>
-                        <a href="https://www.tiktok.com/@clonethejudge" aria-label="TikTok" target="_blank"><i
-                                class="fa-brands fa-tiktok"></i></a>
-                        <a href="https://www.instagram.com/clone_oreberry/" aria-label="Instagram" target="_blank"><i
+                        <a href="https://www.facebook.com" aria-label="Facebook"><i
+                                class="fa-brands fa-facebook"></i></a>
+                        <a href="https://www.youtube.com" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+                        <a href="https://www.tiktok.com" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+                        <a href="https://www.instagram.com" aria-label="Instagram"><i
                                 class="fa-brands fa-instagram"></i></a>
                     </div>
                 </div>
@@ -386,11 +384,18 @@
     </main>
 
     <footer class="site-footer">
-        <p>Creativity Technology = Innovation that Inspires.</p>
+        <p>Creativity + Technology = Innovation that Inspires.</p>
         <small>© <span id="year"></span> Sai Myat Min Thant. All rights reserved.</small>
     </footer>
 
     <script src="script.js"></script>
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script>
+        // Replace with your PUBLIC KEY
+        emailjs.init({ publicKey: "bcC2b6Yy6vwp6s435" });
+    </script>
+
 </body>
 
 </html>
