@@ -180,3 +180,143 @@ function initWeatherFX_NoAPI() {
     startFX(pickEffectFromSeason(month, hemisphere));
   }
 }
+
+// ============================
+// FX Engine (rain/snow/leaves/sun/mist)
+// ============================
+
+let fxStop = null;
+
+function startFX(type) {
+  // stop previous
+  if (typeof fxStop === "function") fxStop();
+
+  const canvas = document.getElementById("weatherFX");
+  const ctx = canvas.getContext("2d");
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  resize();
+  window.addEventListener("resize", resize);
+
+  const W = () => window.innerWidth;
+  const H = () => window.innerHeight;
+
+  // Particle setup
+  const particles = [];
+  const count = type === "rain" ? 200 : type === "snow" ? 140 : type === "leaves" ? 70 : type === "mist" ? 90 : 60;
+
+  for (let i = 0; i < count; i++) {
+    particles.push(makeParticle(type, W(), H()));
+  }
+
+  let rafId = null;
+  function tick() {
+    ctx.clearRect(0, 0, W(), H());
+    for (const p of particles) {
+      updateParticle(p, type, W(), H());
+      drawParticle(ctx, p, type);
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+  tick();
+
+  fxStop = () => {
+    cancelAnimationFrame(rafId);
+    window.removeEventListener("resize", resize);
+    ctx.clearRect(0, 0, W(), H());
+  };
+
+  console.log("Weather FX:", type);
+}
+
+function makeParticle(type, w, h) {
+  const base = { x: Math.random() * w, y: Math.random() * h };
+
+  if (type === "rain") {
+    return { ...base, vx: -1 - Math.random() * 1.5, vy: 10 + Math.random() * 10, len: 10 + Math.random() * 15 };
+  }
+  if (type === "snow") {
+    return { ...base, vx: -0.5 + Math.random(), vy: 0.8 + Math.random() * 2, r: 1 + Math.random() * 3 };
+  }
+  if (type === "leaves") {
+    return { ...base, vx: -1 + Math.random() * 2, vy: 1 + Math.random() * 2, r: 3 + Math.random() * 6, a: Math.random() * Math.PI * 2, va: -0.05 + Math.random() * 0.1 };
+  }
+  if (type === "mist") {
+    return { ...base, vx: 0.2 + Math.random() * 0.6, vy: -0.1 + Math.random() * 0.2, r: 30 + Math.random() * 90, alpha: 0.03 + Math.random() * 0.06 };
+  }
+  // sun (sparkle/dust)
+  return { ...base, vx: -0.2 + Math.random() * 0.4, vy: -0.2 + Math.random() * 0.4, r: 0.8 + Math.random() * 1.6, alpha: 0.12 + Math.random() * 0.18 };
+}
+
+function updateParticle(p, type, w, h) {
+  p.x += p.vx;
+  p.y += p.vy;
+
+  if (type === "leaves") {
+    p.a += p.va;
+    p.x += Math.sin(p.a) * 0.6;
+  }
+
+  // wrap around edges
+  if (p.y > h + 50) { p.y = -50; p.x = Math.random() * w; }
+  if (p.y < -120)   { p.y = h + 120; p.x = Math.random() * w; }
+  if (p.x < -120)   { p.x = w + 120; p.y = Math.random() * h; }
+  if (p.x > w + 120){ p.x = -120; p.y = Math.random() * h; }
+}
+
+function drawParticle(ctx, p, type) {
+  if (type === "rain") {
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + p.vx * 0.7, p.y + p.len);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+    ctx.stroke();
+    return;
+  }
+
+  if (type === "snow") {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fill();
+    return;
+  }
+
+  if (type === "leaves") {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.a);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, p.r, p.r * 0.6, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.25)"; // subtle leaves overlay
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
+  if (type === "mist") {
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+    g.addColorStop(0, `rgba(255,255,255,${p.alpha})`);
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  // sun sparkle
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
+  ctx.fill();
+}
