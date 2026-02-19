@@ -125,157 +125,58 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-const OPENWEATHER_API_KEY = "YOUR_OPENWEATHER_KEY";
+// =======================================
+// Weather FX (Version B: NO API)
+// =======================================
 
-// --- helpers ---
-const show = (id, on) => {
-  const el = document.getElementById(id);
-  if (el) el.style.display = on ? "block" : "none";
-};
-
-const setSummerGlow = (on) => {
-  document.body.classList.toggle("summer-glow", on);
-};
-
-// --- minimal rain effect ---
-function startRain() {
-  const c = document.getElementById("rainCanvas");
-  if (!c) return;
-  const ctx = c.getContext("2d");
-  show("rainCanvas", true);
-  const resize = () => { c.width = innerWidth; c.height = innerHeight; };
-  resize(); addEventListener("resize", resize);
-
-  const drops = Array.from({ length: 180 }, () => ({
-    x: Math.random() * c.width,
-    y: Math.random() * c.height,
-    l: 10 + Math.random() * 18,
-    s: 6 + Math.random() * 10
-  }));
-
-  let raf;
-  const draw = () => {
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(180, 220, 255, 0.35)";
-    ctx.beginPath();
-    for (const d of drops) {
-      ctx.moveTo(d.x, d.y);
-      ctx.lineTo(d.x, d.y + d.l);
-      d.y += d.s;
-      if (d.y > c.height) { d.y = -20; d.x = Math.random() * c.width; }
-    }
-    ctx.stroke();
-    raf = requestAnimationFrame(draw);
-  };
-  draw();
-
-  return () => { cancelAnimationFrame(raf); show("rainCanvas", false); };
+function getHemisphereFromLat(lat) {
+  return lat >= 0 ? "north" : "south";
 }
 
-// --- minimal snow effect ---
-function startSnow() {
-  const c = document.getElementById("snowCanvas");
-  if (!c) return;
-  const ctx = c.getContext("2d");
-  show("snowCanvas", true);
-  const resize = () => { c.width = innerWidth; c.height = innerHeight; };
-  resize(); addEventListener("resize", resize);
+function pickEffectFromSeason(monthIndex0, hemisphere) {
+  // monthIndex0: 0=Jan ... 11=Dec
+  // Simple season mapping:
+  // North: Winter Dec-Feb, Spring Mar-May, Summer Jun-Aug, Autumn Sep-Nov
+  // South: reversed
+  const m = monthIndex0;
+  const north = hemisphere === "north";
 
-  const flakes = Array.from({ length: 120 }, () => ({
-    x: Math.random() * c.width,
-    y: Math.random() * c.height,
-    r: 1 + Math.random() * 2.5,
-    s: 0.6 + Math.random() * 1.6,
-    w: Math.random() * 1.2
-  }));
+  // Helper: check if in set
+  const inMonths = (...arr) => arr.includes(m);
 
-  let raf;
-  const draw = () => {
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
-    for (const f of flakes) {
-      ctx.beginPath();
-      ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-      ctx.fill();
-      f.y += f.s;
-      f.x += Math.sin(f.y / 40) * f.w;
-      if (f.y > c.height) { f.y = -10; f.x = Math.random() * c.width; }
-    }
-    raf = requestAnimationFrame(draw);
-  };
-  draw();
-
-  return () => { cancelAnimationFrame(raf); show("snowCanvas", false); };
-}
-
-let stopRain = null;
-let stopSnow = null;
-
-// --- decide which effect based on OpenWeather code + temperature ---
-function applyWeatherEffects({ conditionId, tempC }) {
-  // stop any previous effects
-  if (stopRain) { stopRain(); stopRain = null; }
-  if (stopSnow) { stopSnow(); stopSnow = null; }
-  setSummerGlow(false);
-
-  // OpenWeather condition groups:
-  // 2xx thunderstorm, 3xx drizzle, 5xx rain, 6xx snow, 800 clear, 80x clouds :contentReference[oaicite:1]{index=1}
-  const group = Math.floor(conditionId / 100);
-
-  if (group === 2 || group === 3 || group === 5) stopRain = startRain();
-  else if (group === 6) stopSnow = startSnow();
-  else if (tempC >= 28) setSummerGlow(true); // “summer vibe” when hot
-}
-
-// --- fetch current weather by coords ---
-async function fetchWeatherByCoords(lat, lon) {
-  const url =
-    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Weather fetch failed: ${res.status}`);
-  const data = await res.json();
-  return {
-    conditionId: data.weather?.[0]?.id ?? 800,
-    tempC: data.main?.temp ?? 25
-  };
-}
-
-// --- main entry: geolocation -> weather -> effect ---
-async function initGeoWeatherEffects() {
-  // GitHub Pages is HTTPS, so geolocation can work. User must allow permission.
-  if (!("geolocation" in navigator)) return fallbackSeasonal();
-
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    try {
-      const { latitude, longitude } = pos.coords;
-      const w = await fetchWeatherByCoords(latitude, longitude);
-      applyWeatherEffects(w);
-    } catch (e) {
-      console.warn(e);
-      fallbackSeasonal();
-    }
-  }, () => {
-    fallbackSeasonal();
-  }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 });
-}
-
-// --- fallback if location denied: simple seasonal logic (works everywhere) ---
-function fallbackSeasonal() {
-  const month = new Date().getMonth() + 1;
-
-  // basic northern-hemisphere-ish season fallback:
-  // (If you want Thailand-specific seasons, tell me and I’ll adjust.)
-  if (month >= 12 || month <= 2) {
-    // winter vibe
-    stopSnow = startSnow();
-  } else if (month >= 6 && month <= 10) {
-    // rainy vibe
-    stopRain = startRain();
-  } else if (month >= 3 && month <= 5) {
-    // hot/summer vibe
-    setSummerGlow(true);
+  if (north) {
+    if (inMonths(11, 0, 1)) return "snow";   // Dec,Jan,Feb
+    if (inMonths(2, 3, 4)) return "rain";    // Mar-Apr-May (spring showers vibe)
+    if (inMonths(5, 6, 7)) return "sun";     // Jun-Jul-Aug
+    return "leaves";                          // Sep-Oct-Nov
+  } else {
+    // Southern hemisphere
+    if (inMonths(5, 6, 7)) return "snow";    // Jun-Jul-Aug (winter)
+    if (inMonths(8, 9, 10)) return "rain";   // Sep-Oct-Nov
+    if (inMonths(11, 0, 1)) return "sun";    // Dec-Jan-Feb (summer)
+    return "leaves";                          // Mar-Apr-May
   }
 }
 
-initGeoWeatherEffects();
+function initWeatherFX_NoAPI() {
+  const month = new Date().getMonth();
+
+  // Default hemisphere if user blocks location:
+  let hemisphere = "north";
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        hemisphere = getHemisphereFromLat(pos.coords.latitude);
+        startFX(pickEffectFromSeason(month, hemisphere));
+      },
+      () => {
+        // no location permission — still works using default hemisphere
+        startFX(pickEffectFromSeason(month, hemisphere));
+      },
+      { timeout: 5000, maximumAge: 60_000 }
+    );
+  } else {
+    startFX(pickEffectFromSeason(month, hemisphere));
+  }
+}
